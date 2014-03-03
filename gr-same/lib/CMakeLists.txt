@@ -27,6 +27,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 list(APPEND same_sources
     same_dec_impl.cc
+    level_thresh_msg_impl.cc
     mag_thresh_msg_impl.cc
     wat_thresh_msg_impl.cc
 )

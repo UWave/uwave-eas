@@ -9,6 +9,7 @@
 
 %{
 #include "same/same_dec.h"
+#include "same/level_thresh_msg.h"
 #include "same/mag_thresh_msg.h"
 #include "same/wat_thresh_msg.h"
 %}
@@ -16,6 +17,8 @@
 
 %include "same/same_dec.h"
 GR_SWIG_BLOCK_MAGIC2(same, same_dec);
+%include "same/level_thresh_msg.h"
+GR_SWIG_BLOCK_MAGIC2(same, level_thresh_msg);
 %include "same/mag_thresh_msg.h"
 GR_SWIG_BLOCK_MAGIC2(same, mag_thresh_msg);
 %include "same/wat_thresh_msg.h"
