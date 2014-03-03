@@ -128,7 +128,9 @@ class _queue_watcher_thread(_threading.Thread):
                 print datetime.datetime.now().isoformat(' ') + ' ' + msg.to_string()
                 self.send_eas_packet('S %s %s' % (self.mon_id, msg.to_string()))
             elif msg.type() == 1: # Tone detection event
-                self.send_eas_packet("T %s %d %d" % (self.mon_id, int(msg.arg1()), int(msg.arg2())))
+                self.send_eas_packet('T %s %d %d' % (self.mon_id, int(msg.arg1()), int(msg.arg2())))
+            elif msg.type() == 10: # Preamble detection event
+                self.send_eas_packet('P')
                  
 if __name__ == '__main__':
     parser = OptionParser(option_class=eng_option, usage="%prog: [options]")

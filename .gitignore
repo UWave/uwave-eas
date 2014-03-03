@@ -5,7 +5,6 @@
 *.egg
 *.egg-info
 dist
-build
 eggs
 parts
 bin
@@ -13,7 +12,6 @@ var
 sdist
 develop-eggs
 .installed.cfg
-lib
 lib64
 __pycache__
 

@@ -61,21 +61,21 @@ namespace gr {
   namespace same {
 
     same_dec::sptr
-    same_dec::make(msg_queue::sptr queue)
+    same_dec::make(msg_queue::sptr queue, long pdmt)
     {
       return gnuradio::get_initial_sptr
-        (new same_dec_impl(queue));
+        (new same_dec_impl(queue, pdmt));
     }
 
     /*
      * The private constructor
      */
-    same_dec_impl::same_dec_impl(msg_queue::sptr queue)
+    same_dec_impl::same_dec_impl(msg_queue::sptr queue, long pdmt)
       : gr::sync_block("same_dec",
               gr::io_signature::make(1, 1, sizeof(char)),
               gr::io_signature::make(0, 0, sizeof(char))),
         d_is_synced(false), d_incoming_bits_next_free_index(0),
-        d_queue(queue)
+        d_queue(queue), d_preamble_detected_message_type(pdmt)
     {
         memset(d_incoming_bits, 0, sizeof(d_incoming_bits));
     }
@@ -134,6 +134,12 @@ namespace gr {
         d_queue->insert_tail(msg);
     }
 
+    void same_dec_impl::send_preamble_detected()
+    {
+        message::sptr msg = message::make(d_preamble_detected_message_type);
+        d_queue->insert_tail(msg);
+    }
+
     bool same_dec_impl::check_sync()
     {
         int bit_matches = 0;
@@ -148,6 +154,7 @@ namespace gr {
         if (bit_matches < 90)
             return false;
 
+        send_preamble_detected();
         //fprintf(stderr, "Found preamble: bit_matches = %d\n", bit_matches);
 
         // See if we have a ZCZC or NNNN header

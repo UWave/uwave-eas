@@ -47,7 +47,8 @@ namespace gr {
        * class. same::same_dec::make is the public interface for
        * creating new instances.
        */
-      static sptr make(msg_queue::sptr queue);
+      static sptr make(msg_queue::sptr queue,
+                       long preamble_detected_message_type = 10);
     };
 
   } // namespace same

@@ -35,7 +35,7 @@ namespace gr {
 
       bool d_is_synced;
       int d_dashes_received; // -1 if a plus '+' hasn't been received yet
-
+      long d_preamble_detected_message_type;
 
       // Ring buffer, stores the last 128 incoming bits when not synced
       char d_incoming_bits[128];
@@ -44,10 +44,11 @@ namespace gr {
       void process_char();
       void send_same_message();
       void send_eom_message();
+      void send_preamble_detected();
       bool check_sync();
 
      public:
-      same_dec_impl(msg_queue::sptr queue);
+      same_dec_impl(msg_queue::sptr queue, long pdmt);
       ~same_dec_impl();
 
       // Where all the action really happens
