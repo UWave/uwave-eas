@@ -18,6 +18,7 @@ from grc_gnuradio import blks2 as grc_blks2
 from argparse import ArgumentParser
 import socket
 import tempfile
+import wave
 
 class eas_encoder(gr.top_block):
 
@@ -71,6 +72,20 @@ if __name__ == '__main__':
     srcfile = tempfile.NamedTemporaryFile()
     srcfile.write('\xAB' * 16 + args.same_msg)
     srcfile.flush()
-    tb = eas_encoder(args.sample_rate, srcfile.name, args.dest_file)
+
+    destfile = tempfile.NamedTemporaryFile()
+    tb = eas_encoder(args.sample_rate, srcfile.name, destfile.name)
     tb.start()
     tb.wait()
+
+    # Take the raw encoded audio, add repetitions one second pauses, and package as WAV
+    data = destfile.read()
+    sec_of_silence = '\x00\x00' * args.sample_rate
+    data = sec_of_silence + data + sec_of_silence + data + sec_of_silence + data + sec_of_silence
+
+    destwav = wave.open(args.dest_file, 'w')
+    destwav.setnchannels(1)
+    destwav.setsampwidth(2)
+    destwav.setframerate(args.sample_rate)
+    destwav.writeframes(data)
+    destwav.close()
