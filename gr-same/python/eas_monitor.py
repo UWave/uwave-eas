@@ -60,7 +60,7 @@ class top_block(gr.top_block):
                 decimation=441,
         )
 
-        # Resampler from 8000 Hz to 8333 1/3rd Hz to deal with SAME's weird parameters
+        # Resampler from 8000 Hz to 4166 2/3rd Hz to deal with SAME's weird parameters
         self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
                 interpolation=50,
                 decimation=96,

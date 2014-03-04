@@ -19,26 +19,34 @@ class eas_source:
         # A deque of the last three (timestamp, SAME message) tuples received
         self.same_msgs = collections.deque(maxlen=3)
         # Timestamps of when the 853 Hz, 960 Hz, and 1050 Hz tones were received, or 0 if not active
-        self.tones_received = [0, 0, 0]
+        self.tones_received = [None, None, None]
 
     def same_msg_received(self, same_msg):
         print '%s SAME message received from %s: %s' % \
             (datetime.datetime.now().isoformat(' '), self.mon_id, same_msg)
+
+        if same_msg == 'NNNN':
+            if self.state != src_state.idle:
+	        print '    Handling EOM'
+	        self.state = src_state.idle
+	        self.last_state_change = datetime.datetime.utcnow()
+	        self.endec.eom(self)
+            return
+
         self.same_msgs.appendleft((datetime.datetime.utcnow(), same_msg))
 
-        if self.state != src_state.idle and same_msg == 'NNNN':
-            print '    Handling EOM'
-            self.state = src_state.idle
-            self.last_state_change = datetime.datetime.utcnow()
-            self.endec.eom(self)
-
+        # The maximum SAME message burst is just over 4 seconds, plus a one second delay between bursts
         recent_msgs = [self.same_msgs[0][1]]
-        if len(self.same_msgs) >= 2 and (self.same_msgs[1][0] - self.same_msgs[0][0]).total_seconds() < 3:
-            recent_msgs.append(self.same_msgs[1])
-            if len(self.same_msgs) == 3 and (self.same_msgs[2][0] - self.same_msgs[1][0]).total_seconds() < 3:
-                recent_msgs.append(self.same_msgs[2])
+        if len(self.same_msgs) >= 2 and (self.same_msgs[0][0] - self.same_msgs[1][0]).total_seconds() < 5.5:
+            recent_msgs.append(self.same_msgs[1][1])
+            if len(self.same_msgs) == 3 and (self.same_msgs[1][0] - self.same_msgs[2][0]).total_seconds() < 5.5:
+                recent_msgs.append(self.same_msgs[2][1])
 
-        if len(recent_msgs) >= 2 and recent_msgs[0][1] == recent_msgs[1][1]:
+        print "Received %d messages so far" % (len(recent_msgs))
+        print recent_msgs
+        print self.same_msgs
+
+        if len(recent_msgs) >= 2 and recent_msgs[0] == recent_msgs[1]:
             print '    SAME integrity verified'
             self.state = src_state.same_recvd
             self.last_state_change = datetime.datetime.utcnow()
@@ -68,7 +76,7 @@ class eas_source:
         if active:
             self.tones_received[tone] = datetime.datetime.utcnow()
         else:
-            self.tones_received[tone] = 0
+            self.tones_received[tone] = None
             if self.state == src_state.eas_wat_detect and tone != 2:
                 self.state = src_state.alert_sent
                 self.last_state_change = datetime.datetime.utcnow()
@@ -81,13 +89,13 @@ class eas_source:
     def check_events(self):
         if self.state == src_state.same_recvd:
             now = datetime.datetime.utcnow()
-            if (now - self.tones_received[0]).total_seconds() > 2 and (now - self.tones_received[1]).total_seconds() > 2:
+            if self.tones_received[0] and (now - self.tones_received[0]).total_seconds() > 1.5 and self.tones_received[1] and (now - self.tones_received[1]).total_seconds() > 1.5:
                 self.state = src_state.eas_wat_detect
                 self.last_state_change = now
                 print '%s %s: Sending alert to the ENDEC w/ WAT' % (datetime.datetime.now().isoformat(' '), self.mon_id)
                 self.endec.alert(self, 1)
 
-            if (now - self.tones_received[2]).total_seconds() > 2:
+            if self.tones_received[2] and (now - self.tones_received[2]).total_seconds() > 1.5:
                 self.state = src_state.eas_wat_detect
                 self.last_state_change = now
                 print '%s %s: Sending alert to the ENDEC w/ WAT' % (datetime.datetime.now().isoformat(' '), self.mon_id)
@@ -116,7 +124,12 @@ class eas_endec:
 
     def alert(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)
-        pass
+
+    def eom(self, source):
+        print 'Source %s received EOM' % (source.mon_id)
+
+    def wat_ended(self, source):
+        print 'Source %s WAT ended' % (source.mon_id)
 
     def run(self):
         should_run = True
