@@ -197,6 +197,15 @@ namespace gr {
         int i = 0;
 
         while (i < noutput_items) {
+            if (d_is_synced) {
+                d_incoming_bits[d_incoming_bits_next_free_index++] = in[i++];
+
+                if (d_incoming_bits_next_free_index == 8) {
+                    process_char();
+                    d_incoming_bits_next_free_index = 0;
+                }
+            }
+
             if (!d_is_synced) {
                 while (i < noutput_items) {
                     d_incoming_bits[d_incoming_bits_next_free_index] = in[i++];
@@ -206,15 +215,6 @@ namespace gr {
                         d_incoming_bits_next_free_index = 0;
                         break;
                     }
-                }
-            }
-
-            if (d_is_synced) {
-                d_incoming_bits[d_incoming_bits_next_free_index++] = in[i++];
-
-                if (d_incoming_bits_next_free_index == 8) {
-                    process_char();
-                    d_incoming_bits_next_free_index = 0;
                 }
             }
         }
