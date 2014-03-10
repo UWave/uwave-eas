@@ -92,7 +92,8 @@ class top_block(gr.top_block):
         #self.avg_audio_level = analog.probe_avg_mag_sqrd_ff(-50)
         #self.level_thresh_msg = same.level_thresh_msg(self.msg_queue, 1, 3, db_to_abs(-30), db_to_abs(-40))
 
-        self.audio_sink = blocks.udp_sink(4, '127.0.0.1', audio_port)
+        self.audio_sink_converter = blocks.float_to_short(1, 3276)
+        self.audio_sink = blocks.udp_sink(2, '127.0.0.1', audio_port)
 
         ##################################################
         # Connections
@@ -112,7 +113,7 @@ class top_block(gr.top_block):
         self.connect((self.agc, 0), (self.tone_det_2, 0), (self.wat_thresh_msg, 2))
         #self.connect((self.agc, 0), (self.avg_audio_level, 0), (self.level_thresh_msg, 0))
 
-        self.connect((self.agc, 0), (self.audio_sink, 0))
+        self.connect((self.agc, 0), (self.audio_sink_converter, 0), (self.audio_sink, 0))
 
         self._watcher = _queue_watcher_thread(self.msg_queue, mon_id)
 

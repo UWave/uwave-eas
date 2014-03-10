@@ -22,7 +22,7 @@ class source_audio_receiver(threading.Thread):
     def run(self):
         # FIXME: this is a bit off, I think (it will include the EOM received)
         while self.source.state == src_state.alert_sent:
-            self.source.audio_buffer.append(list(self.sock.recv(1500)))
+            self.source.audio_buffer.append(self.sock.recv(1500))
         self.sock.close()
 
 class eas_source:
@@ -135,9 +135,10 @@ class eas_source:
                 self.audio_thread = source_audio_receiver(self)
 
 class alert_thread(threading.Thread):
-    def __init__(self, endec, msg, with_wat):
+    def __init__(self, endec, source, msg, with_wat):
         threading.Thread.__init__(self)
         self.endec = endec
+        self.source = source
         self.msg = msg
         self.with_wat = with_wat
         self.start()
@@ -151,6 +152,13 @@ class alert_thread(threading.Thread):
         subprocess.call(['aplay', '-D', 'endec', '/tmp/alert.wav'])
         if self.with_wat:
             subprocess.call(['aplay', '-D', 'endec', 'eas-attn-8s-n20db.wav'])
+
+        player = subprocess.Popen(['aplay', '-D', 'endec', '-t', 'raw', '-c', '1', '-r', '8000', '-f', 'S16_LE'], stdin=subprocess.PIPE)
+        while len(self.source.audio_buffer) != 0:
+            player.stdin.write(self.source.audio_buffer.popleft())
+        player.stdin.close()
+        player.wait()
+
         subprocess.call(['aplay', '-D', 'endec', 'nnnn.wav'])
         self.endec.jack.connect('system:capture_1', 'stereo_tool:in_l')
         self.endec.jack.connect('system:capture_2', 'stereo_tool:in_r')
@@ -176,13 +184,13 @@ class eas_endec:
             self.sources[mon_id] = source
             return source
 
-    def start_alert(self, msg, with_wat):
+    def start_alert(self, source, msg, with_wat):
         # TODO: Fix up call letters
-        alert = alert_thread(self, msg, with_wat)
+        alert = alert_thread(self, source, msg, with_wat)
 
     def alert_received(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)
-        self.start_alert(source.msg, with_wat)
+        self.start_alert(source, source.msg, with_wat)
 
     def eom_received(self, source):
         print 'Source %s received EOM' % (source.mon_id)
