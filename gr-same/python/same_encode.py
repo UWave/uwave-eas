@@ -63,7 +63,7 @@ class eas_encoder(gr.top_block):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='UWave EAS SAME Encoder')
-    parser.add_argument('-r', '--sample_rate', type=int, default=44100)
+    parser.add_argument('-r', '--sample_rate', type=int, default=8000)
     parser.add_argument('same_msg')
     parser.add_argument('dest_file')
     args = parser.parse_args()
