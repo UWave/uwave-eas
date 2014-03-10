@@ -8,6 +8,8 @@ import socket
 import subprocess
 import threading
 
+import SAME
+
 class src_state:
     idle, same_recvd, eas_wat_detect, nws_wat_detect, alert_sent = range(5)
 
@@ -185,12 +187,14 @@ class eas_endec:
             return source
 
     def start_alert(self, source, msg, with_wat):
-        # TODO: Fix up call letters
-        alert = alert_thread(self, source, msg, with_wat)
+        msg.set_callsign('UWAVE FM')
+        alert = alert_thread(self, source, str(msg), with_wat)
 
     def alert_received(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)
-        self.start_alert(source, source.msg, with_wat)
+        msg = SAME.from_str(source.msg)
+        if not msg.has_expired():
+            self.start_alert(source, msg, with_wat)
 
     def eom_received(self, source):
         print 'Source %s received EOM' % (source.mon_id)
