@@ -10,17 +10,76 @@ event_types = {
 	'EAN': { 'description': 'Emergency Action Notification', 'forward': True, 'max_delay': 0 },
 	'EAT': { 'description': 'Emergency Action Termination', 'forward': True, 'max_delay': 0 },
 	'NIC': { 'description': 'National Information Center Statement', 'forward': True, 'max_delay': 0 },
+	'NPT': { 'description': 'National Periodic Test', 'forward': True, 'max_delay': 900 },
 	'RMT': { 'description': 'Required Monthly Test', 'forward': True, 'max_delay': 900 },
-	'RWT': { 'description': 'Required Weekly Test', 'forward': False }
+	'RWT': { 'description': 'Required Weekly Test', 'forward': False },
+
+	'ADM': { 'description': 'Administrative Message', 'forward', True, 'max_delay': 300 },
+	'AVW': { 'description': 'Avalanche Warning', 'forward', True, 'max_delay': 300 },
+	'AVA': { 'description': 'Avalanche Watch', 'forward', True, 'max_delay': 300 },
+	'BZW': { 'description': 'Blizzard Warning', 'forward', True, 'max_delay': 300 },
+	'CAE': { 'description': 'Child Abduction Emergency', 'forward', True, 'max_delay': 300 },
+	'CDW': { 'description': 'Civil Danger Warning', 'forward', True, 'max_delay': 300 },
+	'CEM': { 'description': 'Civil Emergency Warning', 'forward', True, 'max_delay': 300 },
+	'CFW': { 'description': 'Coastal Flood Warning', 'forward', True, 'max_delay': 300 },
+	'CFA': { 'description': 'Coastal Flood Watch', 'forward', True, 'max_delay': 300 },
+	'DSW': { 'description': 'Dust Storm Warning', 'forward', True, 'max_delay': 300 },
+	'EQW': { 'description': 'Earthquake Warning', 'forward', True, 'max_delay': 300 },
+	'EVI': { 'description': 'Evacuation Immediate', 'forward', True, 'max_delay': 300 },
+	'FRW': { 'description': 'Fire Warning', 'forward', True, 'max_delay': 300 },
+	'FFW': { 'description': 'Flash Flood Warning', 'forward', True, 'max_delay': 300 },
+	'FFA': { 'description': 'Flash Flood Watch', 'forward', True, 'max_delay': 300 },
+	'FFS': { 'description': 'Flash Flood Statement', 'forward', True, 'max_delay': 300 },
+	'FLW': { 'description': 'Flood Warning', 'forward', True, 'max_delay': 300 },
+	'FLA': { 'description': 'Flood Watch', 'forward', True, 'max_delay': 300 },
+	'FLS': { 'description': 'Flood Statement', 'forward', True, 'max_delay': 300 },
+	'HMW': { 'description': 'Hazardous Materials Warning', 'forward', True, 'max_delay': 300 },
+	'HWW': { 'description': 'High Wind Warning', 'forward', True, 'max_delay': 300 },
+	'HWA': { 'description': 'High Wind Watch', 'forward', True, 'max_delay': 300 },
+	'HUW': { 'description': 'Hurricane Warning', 'forward', True, 'max_delay': 300 },
+	'HUA': { 'description': 'Hurricane Watch', 'forward', True, 'max_delay': 300 },
+	'HLS': { 'description': 'Hurricane Statement', 'forward', True, 'max_delay': 300 },
+	'LEW': { 'description': 'Law Enforcement Warning', 'forward', True, 'max_delay': 300 },
+	'LAE': { 'description': 'Local Area Emergency', 'forward', True, 'max_delay': 300 },
+	'NMN': { 'description': 'Network Message Notification', 'forward', True, 'max_delay': 300 },
+	'TOE': { 'description': '911 Telephone Outage Emergency', 'forward', True, 'max_delay': 300 },
+	'NUW': { 'description': 'Nuclear Power Plant Warning', 'forward', True, 'max_delay': 300 },
+	'DMO': { 'description': 'Practice/Demo Warning', 'forward', False, 'max_delay': 900 },
+	'RHW': { 'description': 'Radiological Hazard Warning', 'forward', True, 'max_delay': 300 },
+	'SVR': { 'description': 'Severe Thunderstorm Warning', 'forward', True, 'max_delay': 300 },
+	'SVA': { 'description': 'Severe Thunderstorm Watch', 'forward', True, 'max_delay': 300 },
+	'SVS': { 'description': 'Severe Weather Statement', 'forward', True, 'max_delay': 300 },
+	'SPW': { 'description': 'Shelter in Place Warning', 'forward', True, 'max_delay': 300 },
+	'SMW': { 'description': 'Special Marine Warning', 'forward', True, 'max_delay': 300 },
+	'SPS': { 'description': 'Special Weather Statement', 'forward', True, 'max_delay': 300 },
+	'TOR': { 'description': 'Tornado Warning', 'forward', True, 'max_delay': 300 },
+	'TOA': { 'description': 'Tornado Watch', 'forward', True, 'max_delay': 300 },
+	'TSW': { 'description': 'Tsunami Warning', 'forward', True, 'max_delay': 300 },
+	'TSA': { 'description': 'Tsunami Watch', 'forward', True, 'max_delay': 300 },
+	'VOW': { 'description': 'Volcano Warning', 'forward', True, 'max_delay': 300 },
+	'WSW': { 'description': 'Winter Storm Warning', 'forward', True, 'max_delay': 300 },
+	'WSA': { 'description': 'Winter Storm Watch', 'forward', True, 'max_delay': 300 }
 }
 
 org_types = {
-	'PEP': { 'description': 'Primary Entry Point Station' },
-	'CIV': { 'description': 'Civil authorities' },
-	'WXR': { 'description': 'National Weather Service' },
-	'EAS': { 'description': 'EAS Participant' }
+	'PEP': { 'description': 'Primary Entry Point Station', 'msg': 'The United States Government has' },
+	'CIV': { 'description': 'Civil Authorities', 'msg': 'Civil Authorities have' },
+	'WXR': { 'description': 'National Weather Service', 'msg': 'The National Weather Service has' },
+	'EAS': { 'description': 'EAS Participant', 'msg': 'An EAS Participant has' }
 }
 
+area_mods = [
+	'',
+	'Northwest ',
+	'Northern ',
+	'Northeast ',
+	'Western ',
+	'Central ',
+	'Eastern ',
+	'Southwest ',
+	'Southern ',
+	'Southeast '
+]
 
 class SAME(object):
 	"""A class for Specific Area Messaging Protocol messages"""
@@ -47,6 +106,13 @@ class SAME(object):
 
 	def has_expired(self):
 		return time.time() > self._time + self._purgetime
+
+	def description(self):
+		msg = "%s issued a%s %s for the following areas: " % \
+			(org_types[self._org]['msg'], \
+			self._event[0]
+			event_types[self._event]['description'])
+		
 
 def from_str(msg):
 	
