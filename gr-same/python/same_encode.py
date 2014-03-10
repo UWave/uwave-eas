@@ -38,7 +38,8 @@ class eas_encoder(gr.top_block):
         self.repeat = blocks.repeat(4, 96)
         self.chunks_to_symbols = digital.chunks_to_symbols_bf(([-1, 1]), 1)
         self.freq_mod = analog.frequency_modulator_fc(3.14159265 / 96)
-        self.center_freq_src = analog.sig_source_c(50000, analog.GR_COS_WAVE, 1822.916666, 0.8, 0)
+        # TODO: Make amplitude adjustable
+        self.center_freq_src = analog.sig_source_c(50000, analog.GR_COS_WAVE, 1822.916666, 0.1, 0)
         self.freq_mult = blocks.multiply_vcc(1)
         self.rational_resampler = filter.rational_resampler_ccc(
                 interpolation=samp_rate / 100,

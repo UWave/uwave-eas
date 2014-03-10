@@ -145,16 +145,15 @@ class alert_thread(threading.Thread):
     def run(self):
         subprocess.call(['./same_encode.py', self.msg, '/tmp/alert.wav'])
         # FIXME: don't hardcode these
-        #self.endec.jack.disconnect('system:capture_1', 'stereo_tool:in_l')
-        #self.endec.jack.disconnect('system:capture_2', 'stereo_tool:in_r')
-        self.endec.jack.disconnect('stereo_tool:out_l', 'darkice:left')
-        self.endec.jack.disconnect('stereo_tool:out_r', 'darkice:right')
+        # This was buggy under PyJack 0.5.1. 0.6 seems to fix it.
+        self.endec.jack.disconnect('system:capture_1', 'stereo_tool:in_l')
+        self.endec.jack.disconnect('system:capture_2', 'stereo_tool:in_r')
         subprocess.call(['aplay', '-D', 'endec', '/tmp/alert.wav'])
         if self.with_wat:
-            subprocess.call(['aplay', '-D', 'endec', 'eas-attn-10s-0db.wav'])
+            subprocess.call(['aplay', '-D', 'endec', 'eas-attn-8s-n20db.wav'])
         subprocess.call(['aplay', '-D', 'endec', 'nnnn.wav'])
-        self.endec.jack.connect('stereo_tool:out_l', 'darkice:left')
-        self.endec.jack.connect('stereo_tool:out_r', 'darkice:right')
+        self.endec.jack.connect('system:capture_1', 'stereo_tool:in_l')
+        self.endec.jack.connect('system:capture_2', 'stereo_tool:in_r')
 
 class eas_endec:
     def __init__(self, default_in_client, out_client):
@@ -162,7 +161,7 @@ class eas_endec:
         self.sock.bind(('127.0.0.1', 0xEA51))
         self.sock.settimeout(0.1)
         self.sources = dict()
-        self.jack = jack.Client("UWave EAS ENDEC")
+        self.jack = jack.Client("endec")
         self.default_in_client = default_in_client
         self.out_client = out_client
 
