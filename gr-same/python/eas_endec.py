@@ -187,12 +187,17 @@ class eas_endec:
             return source
 
     def start_alert(self, source, msg, with_wat):
+        # FIXME: Do not hardcode
         msg.set_callsign('UWAVE FM')
         alert = alert_thread(self, source, str(msg), with_wat)
 
     def alert_received(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)
         msg = SAME.from_str(source.msg)
+        # TODO: Check for duplicate messages and do proper filtering
+        if msg._event == 'RWT':
+            print '    Not relaying RWT'
+            return
         if not msg.has_expired():
             self.start_alert(source, msg, with_wat)
 
