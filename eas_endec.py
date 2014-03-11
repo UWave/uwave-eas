@@ -7,6 +7,7 @@ import jack
 import socket
 import subprocess
 import threading
+import websocket
 
 import SAME
 
@@ -190,6 +191,15 @@ class eas_endec:
         # FIXME: Do not hardcode
         msg.set_callsign('UWAVE FM')
         alert = alert_thread(self, source, str(msg), with_wat)
+        try:
+            ws = websocket.create_connection('wss://127.0.0.1:4444/primus')
+            websock_msg = '{"type": "alert", "title": "EAS Alert", "link": "", "color": "%s", "message": "%s", "expires": %d}' % \
+                (msg.webcolor(), msg.description(), msg.expires())
+            print 'Sending: ', websock_msg
+            ws.send(websock_msg)
+            ws.close()
+        except:
+            print "Unexpected error sending web alert:", sys.exc_info()[0]
 
     def alert_received(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)

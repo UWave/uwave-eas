@@ -131,6 +131,16 @@ class SAME(object):
 		except:
 			return str(self)
 
+	def webcolor(self):
+		if self._event in ['RWT','RMT','NPT','ADM','DMO','NIC','EAT']:
+			return 'eas-alert-steel'
+		if self._event in ['EAN','RHW','TOR','EVI','NUW','SPW','VOW']:
+			return 'eas-alert-red'
+		return 'eas-alert-orange'
+
+	def expires(self):
+		return (self._time + self._purgetime) * 1000
+
 def from_str(msg):
 	
 	m = same_re.search(msg)
