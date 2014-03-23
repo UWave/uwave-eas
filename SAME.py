@@ -150,7 +150,7 @@ def from_str(msg):
 	org = m.group(1)
 	event = m.group(2)
 	areas = m.group(3)[1:].split('-')
-	purgetime = int(m.group(4)) * 60 + int(m.group(5))
+	purgetime = (int(m.group(4)) * 60 + int(m.group(5))) * 60
 	# Lots of shenanigans to make sure we get the year right
 	julian_day = int(m.group(6)[0:3])
 	gmt = time.gmtime()
