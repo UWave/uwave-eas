@@ -15,7 +15,7 @@ event_types = {
 	'RMT': { 'description': 'Required Monthly Test', 'forward': True, 'max_delay': 900 },
 	'RWT': { 'description': 'Required Weekly Test', 'forward': False },
 
-	'ADM': { 'description': 'Administrative Message', 'forward': True, 'max_delay': 300 },
+	'ADM': { 'description': 'Administrative Message', 'forward': False },
 	'AVW': { 'description': 'Avalanche Warning', 'forward': True, 'max_delay': 300 },
 	'AVA': { 'description': 'Avalanche Watch', 'forward': True, 'max_delay': 300 },
 	'BZW': { 'description': 'Blizzard Warning', 'forward': True, 'max_delay': 300 },
@@ -26,7 +26,7 @@ event_types = {
 	'CFA': { 'description': 'Coastal Flood Watch', 'forward': True, 'max_delay': 300 },
 	'DSW': { 'description': 'Dust Storm Warning', 'forward': True, 'max_delay': 300 },
 	'EQW': { 'description': 'Earthquake Warning', 'forward': True, 'max_delay': 300 },
-	'EVI': { 'description': 'Evacuation Immediate', 'forward': True, 'max_delay': 300 },
+	'EVI': { 'description': 'Evacuation Immediate', 'msg': 'Immediate Evacuation Order', 'forward': True, 'max_delay': 300 },
 	'FRW': { 'description': 'Fire Warning', 'forward': True, 'max_delay': 300 },
 	'FFW': { 'description': 'Flash Flood Warning', 'forward': True, 'max_delay': 300 },
 	'FFA': { 'description': 'Flash Flood Watch', 'forward': True, 'max_delay': 300 },
@@ -118,10 +118,13 @@ class SAME(object):
 
 	def description(self):
 		try:
+			desc = event_types[self._event]['description']
+			if 'msg' in event_types[self._event]:
+				desc = event_types[self._event]['msg']
 			msg = "%s issued a%s %s for the following areas: " % \
 				(org_types[self._org]['msg'], \
 				'n' if self._event[0] == 'E' else '', \
-				event_types[self._event]['description'])
+				desc)
 			msg_areas = []
 			for area in self._areas:
 				msg_areas.append(area_mods[int(area[0])]+ areas[area[1:6]])
@@ -140,6 +143,11 @@ class SAME(object):
 
 	def expires(self):
 		return (self._time + self._purgetime) * 1000
+
+	def should_forward(self):
+		if not self._event in event_types:
+			return True
+		return event_types[self._event]['forward']
 
 def from_str(msg):
 	
