@@ -3,10 +3,12 @@
 import array
 import collections
 import datetime
+import httplib
 import jack
 import socket
 import subprocess
 import threading
+import urllib
 import websocket
 
 import SAME
@@ -18,8 +20,9 @@ class source_audio_receiver(threading.Thread):
     def __init__(self, source):
         threading.Thread.__init__(self)
         self.source = source
+        self.source.audio_buffer.clear()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('127.0.0.1', 31337)) # FIXME: Remove hardcoded audio port
+        self.sock.bind(('127.0.0.1', source.audio_port))
         self.start()
 
     def run(self):
@@ -27,6 +30,7 @@ class source_audio_receiver(threading.Thread):
         while self.source.state == src_state.alert_sent:
             self.source.audio_buffer.append(self.sock.recv(1500))
         self.sock.close()
+        self.source.audio_thread = None
 
 class eas_source:
     def __init__(self, endec, mon_id):
@@ -41,12 +45,16 @@ class eas_source:
         self.tones_received = [None, None, None]
         self.audio_buffer = collections.deque(maxlen=960000) # 120 seconds at 8 kHz
         self.audio_thread = None
+        self.audio_port = None
 
     def same_msg_received(self, same_msg):
         print '%s SAME message received from %s: %s' % \
             (datetime.datetime.now().isoformat(' '), self.mon_id, same_msg)
 
         if same_msg == 'NNNN':
+            # Pass the alert if we haven't detected a WAT but already received an EOM
+            if self.state == src_state.same_recvd:
+                self.endec.alert_received(self, 0)
             if self.state != src_state.idle:
 	        print '    Handling EOM'
 	        self.state = src_state.idle
@@ -55,6 +63,13 @@ class eas_source:
             return
 
         self.same_msgs.appendleft((datetime.datetime.utcnow(), same_msg))
+
+        # Ignore other SAME messages received during an alert (to prevent problems with echoed data busrts
+        # like during the November 2011 National Test.
+        # FIXME: We should be able to ignore messages in the same_recvd state but we currently use that to
+        # delay recording messages. This will go away once we handle "preamble received" and silence msgs.
+        if self.state != src_state.idle and self.state != src_state.same_recvd:
+            return
 
         # The maximum SAME message burst is just over 4 seconds, plus a one second delay between bursts
         recent_msgs = [self.same_msgs[0][1]]
@@ -89,12 +104,26 @@ class eas_source:
             self.last_state_change = datetime.datetime.utcnow()
             self.msg = msg
 
+    def set_audio_port(self, audio_port):
+        self.audio_port = int(audio_port)
+        print 'Registered UDP port for source %s: %s' % (self.mon_id, self.audio_port)
+
     def preamble_detected(self):
         # If we detect another preamble before the WAT detection has ended, restart the WAT detection timer
         # FIXME: This should really wait until the channel becomes silent again
         # TODO: If we detect a preamble but no valid messages, log the audio for manual control
         if self.state == src_state.same_recvd:
             self.last_state_change = datetime.datetime.utcnow()
+
+    def start_audio_recording(self):
+        if not self.audio_port:
+            print '!!! Source %s has not registered its audio port!' % (self.mon_id)
+            return
+
+        if self.audio_thread:
+            self.audio_buffer.clear()
+        else:
+            self.audio_thread = source_audio_receiver(self)
 
     def wat_event_received(self, tone, active):
         if active:
@@ -106,12 +135,12 @@ class eas_source:
                 wat_len = min((self.last_state_change - self.tones_received[0]).total_seconds(), \
                               (self.last_state_change - self.tones_received[1]).total_seconds())
                 self.endec.wat_ended(self, wat_len)
-                self.audio_thread = source_audio_receiver(self)
+                self.start_audio_recording()
             elif self.state == src_state.nws_wat_detect and tone == 2:
                 self.state = src_state.alert_sent
                 self.last_state_change = datetime.datetime.utcnow()
                 self.endec.wat_ended(self, (self.last_state_change - self.tones_received[2]).total_seconds())
-                self.audio_thread = source_audio_receiver(self)
+                self.start_audio_recording()
             self.tones_received[tone] = None
 
 
@@ -125,17 +154,17 @@ class eas_source:
                 self.endec.alert_received(self, 1)
 
             if self.tones_received[2] and (now - self.tones_received[2]).total_seconds() > 1.5:
-                self.state = src_state.eas_wat_detect
+                self.state = src_state.nws_wat_detect
                 self.last_state_change = now
                 print '%s %s: Sending alert to the ENDEC w/ WAT' % (datetime.datetime.now().isoformat(' '), self.mon_id)
                 self.endec.alert_received(self, 1)
 
-            if (now - self.last_state_change).total_seconds() > 3:
+            if (now - self.last_state_change).total_seconds() > 7:
                 self.state = src_state.alert_sent
                 self.last_state_change = now
                 print '%s %s: Sending alert to the ENDEC' % (datetime.datetime.now().isoformat(' '), self.mon_id)
                 self.endec.alert_received(self, 0)
-                self.audio_thread = source_audio_receiver(self)
+                self.start_audio_recording()
 
 class alert_thread(threading.Thread):
     def __init__(self, endec, source, msg, with_wat):
@@ -175,6 +204,7 @@ class eas_endec:
         self.jack = jack.Client("endec")
         self.default_in_client = default_in_client
         self.out_client = out_client
+        self.active_alerts = set()
 
         print 'UWave EAS ENDEC'
         print 'System sample rate: %d' % (self.jack.get_sample_rate())
@@ -194,7 +224,7 @@ class eas_endec:
         try:
             ws = websocket.create_connection('wss://127.0.0.1:4444/primus')
             websock_msg = '{"type": "alert", "title": "EAS Alert", "link": "", "color": "%s", "message": "%s", "expires": %d}' % \
-                (msg.webcolor(), msg.description(), msg.expires())
+                (msg.webcolor(), msg.description(), msg.expires() * 1000)
             print 'Sending: ', websock_msg
             ws.send(websock_msg)
             ws.close()
@@ -203,12 +233,20 @@ class eas_endec:
 
     def alert_received(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)
-        msg = SAME.from_str(source.msg)
-        # TODO: Check for duplicate messages and do proper filtering
-        if msg._event == 'RWT':
-            print '    Not relaying RWT'
+        try:
+            msg = SAME.from_str(source.msg)
+        except:
+            print '    Error decoding SAME message; skipping'
             return
-        if not msg.has_expired():
+        self.active_alerts = [alert for alert in self.active_alerts if not alert.has_expired()]
+        if msg in self.active_alerts:
+            print '    Duplicate alert'
+        if not msg.should_forward():
+            print '    Not relaying this event type'
+            return
+        if msg.has_expired():
+	    print '    Message has expired'    
+        else:
             self.start_alert(source, msg, with_wat)
 
     def eom_received(self, source):
@@ -229,10 +267,12 @@ class eas_endec:
                 elif msg[0] == 'T': # Warning alert tone event received
                     (type, mon_id, tone, active) = msg.split(' ', 3)
                     self.get_source(mon_id).wat_event_received(int(tone), int(active))
-                #elif msg[0] == 'P': # Preamble detected
-                    #print msg
-                    #(type, mon_id) = msg.split(' ')
-                    #self.get_source(mon_id).preamble_detected()
+                elif msg[0] == 'R': # Register monitor/audio port
+                    (type, mon_id, audio_port) = msg.split(' ', 2)
+                    self.get_source(mon_id).set_audio_port(audio_port)
+                elif msg[0] == 'P': # Preamble detected
+                    (type, mon_id) = msg.split(' ', 1)
+                    self.get_source(mon_id).preamble_detected()
 
             except socket.timeout:
                 pass

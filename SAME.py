@@ -101,20 +101,29 @@ class SAME(object):
 		self._time = timestamp
 		self._callsign = callsign
 
-	def __str__(self): 
+	def _str(self, callsign):
 		return 'ZCZC-%3s-%3s-%s+%4s-%7s-%-8s-' % (
 			self._org, self._event,
 			'-'.join(self._areas),
 			'%02d%02d' % (self._purgetime / 60, self._purgetime % 60),
 			time.strftime('%j%H%M', time.gmtime(self._time)),
-			self._callsign)
+			callsign)
+
+	def __str__(self):
+		return self._str(self._callsign)
+
+        def __hash__(self):
+		return self._str('').__hash__()
+
+	def __eq__(self, other):
+		return self._str('') == other._str('')
 
 	def set_callsign(self, callsign):
 		# In case we get a callsign with a dash in it, convert it to the SAME-compatible format
 		self._callsign = callsign.replace('-', '/')
 
 	def has_expired(self):
-		return time.time() > self._time + self._purgetime
+		return time.time() > self.expires()
 
 	def description(self):
 		try:
@@ -142,7 +151,7 @@ class SAME(object):
 		return 'eas-alert-orange'
 
 	def expires(self):
-		return (self._time + self._purgetime) * 1000
+		return (self._time + self._purgetime)
 
 	def should_forward(self):
 		if not self._event in event_types:

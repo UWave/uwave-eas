@@ -115,10 +115,10 @@ class top_block(gr.top_block):
 
         self.connect((self.agc, 0), (self.audio_sink_converter, 0), (self.audio_sink, 0))
 
-        self._watcher = _queue_watcher_thread(self.msg_queue, mon_id)
+        self._watcher = _queue_watcher_thread(self.msg_queue, mon_id, audio_port)
 
 class _queue_watcher_thread(_threading.Thread):
-    def __init__(self, msg_q, mon_id):
+    def __init__(self, msg_q, mon_id, audio_port):
         _threading.Thread.__init__(self)
         self.setDaemon(1)
         self.msg_q = msg_q
@@ -128,6 +128,9 @@ class _queue_watcher_thread(_threading.Thread):
 
         # FIXME: these should not be hardcoded
         self.dest = ('127.0.0.1', 0xEA51)
+
+        # Register this monitor with the EAS ENDEC
+        self.socket.sendto('R %s %d' % (mon_id, audio_port), self.dest)
 
         self.start()
 
@@ -143,7 +146,7 @@ class _queue_watcher_thread(_threading.Thread):
             elif msg.type() == 1: # Tone/level detection event
                 self.send_eas_packet('T %s %d %d' % (self.mon_id, int(msg.arg1()), int(msg.arg2())))
             elif msg.type() == 10: # Preamble detection event
-                self.send_eas_packet('P')
+                self.send_eas_packet('P %s' % (self.mon_id))
                  
 if __name__ == '__main__':
     parser = ArgumentParser(description='A source decoder/monitor for the UWave EAS ENDEC.')
