@@ -247,6 +247,7 @@ class eas_endec:
         if msg.has_expired():
 	    print '    Message has expired'    
         else:
+            self.active_alerts.add(msg)
             self.start_alert(source, msg, with_wat)
 
     def eom_received(self, source):
