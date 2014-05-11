@@ -241,13 +241,12 @@ class eas_endec:
         self.active_alerts = [alert for alert in self.active_alerts if not alert.has_expired()]
         if msg in self.active_alerts:
             print '    Duplicate alert'
-        if not msg.should_forward():
+        elif not msg.should_forward():
             print '    Not relaying this event type'
-            return
-        if msg.has_expired():
+        elif msg.has_expired():
 	    print '    Message has expired'    
         else:
-            self.active_alerts.add(msg)
+            self.active_alerts.append(msg)
             self.start_alert(source, msg, with_wat)
 
     def eom_received(self, source):
