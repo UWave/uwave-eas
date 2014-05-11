@@ -49,7 +49,8 @@ class eas_encoder(gr.top_block):
         )
         self.complex_to_float = blocks.complex_to_float()
         self.float_to_short = blocks.float_to_short(1, 32767)
-	self.sink = blocks.file_sink(2, dest_filename)
+        self.sink = blocks.file_sink(2, dest_filename)
+        self.sink.set_unbuffered(True)
 
         ##################################################
         # Connections
@@ -78,6 +79,7 @@ if __name__ == '__main__':
     tb = eas_encoder(args.sample_rate, srcfile.name, destfile.name)
     tb.start()
     tb.wait()
+    tb.stop()
 
     # Take the raw encoded audio, add repetitions one second pauses, and package as WAV
     data = destfile.read()
