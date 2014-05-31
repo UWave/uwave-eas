@@ -7,11 +7,17 @@ import httplib
 import jack
 import socket
 import subprocess
+import tempfile
 import threading
 import urllib
 import websocket
 
 import SAME
+
+alert_sent_hooks = []
+alert_output_done_hooks = []
+
+from plugins import *
 
 class src_state:
     idle, same_recvd, eas_wat_detect, nws_wat_detect, alert_sent = range(5)
@@ -23,14 +29,29 @@ class source_audio_receiver(threading.Thread):
         self.source.audio_buffer.clear()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('127.0.0.1', source.audio_port))
+        try:
+            self.output_file = tempfile.NamedTemporaryFile(delete=False)
+        except:
+            print '    WARNING: An exception occurred while creating the alert audio output file';
         self.start()
 
     def run(self):
         # FIXME: this is a bit off, I think (it will include the EOM received)
         while self.source.state == src_state.alert_sent:
-            self.source.audio_buffer.append(self.sock.recv(1500))
+            data = self.sock.recv(1500)
+            self.source.audio_buffer.append(data)
+            try:
+                self.output_file.write(data)
+            except:
+                pass
         self.sock.close()
         self.source.audio_thread = None
+        for hook in alert_output_done_hooks:
+            try:
+                hook(self)
+            except:
+                pass
+        self.output_file.close()
 
 class eas_source:
     def __init__(self, endec, mon_id):
@@ -209,6 +230,11 @@ class eas_endec:
         print 'UWave EAS ENDEC'
         print 'System sample rate: %d' % (self.jack.get_sample_rate())
 
+        # FIXME: Remove later. Only for debugging.
+        self.get_source('KPLU').set_audio_port(31337)
+        self.get_source('KHB60').set_audio_port(31338)
+        self.get_source('TEST').set_audio_port(31339)
+
     def get_source(self, mon_id):
         if mon_id in self.sources:
             return self.sources[mon_id]
@@ -221,15 +247,11 @@ class eas_endec:
         # FIXME: Do not hardcode
         msg.set_callsign('UWAVE FM')
         alert = alert_thread(self, source, str(msg), with_wat)
-        try:
-            ws = websocket.create_connection('wss://127.0.0.1:4444/primus')
-            websock_msg = '{"type": "alert", "title": "EAS Alert", "link": "", "color": "%s", "message": "%s", "expires": %d}' % \
-                (msg.webcolor(), msg.description(), msg.expires() * 1000)
-            print 'Sending: ', websock_msg
-            ws.send(websock_msg)
-            ws.close()
-        except:
-            print "Unexpected error sending web alert:", sys.exc_info()[0]
+        for hook in alert_sent_hooks:
+            try:
+                hook(msg)
+            except:
+                pass
 
     def alert_received(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)
