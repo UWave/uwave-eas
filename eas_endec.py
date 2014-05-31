@@ -32,7 +32,8 @@ class source_audio_receiver(threading.Thread):
         try:
             self.output_file = tempfile.NamedTemporaryFile(delete=False)
         except:
-            print '    WARNING: An exception occurred while creating the alert audio output file';
+            print '    WARNING: An exception occurred while creating the alert audio output file:';
+            print '    ', sys.exc_info()[0]
         self.start()
 
     def run(self):
@@ -157,11 +158,15 @@ class eas_source:
                               (self.last_state_change - self.tones_received[1]).total_seconds())
                 self.endec.wat_ended(self, wat_len)
                 self.start_audio_recording()
+                print '%s %s: Sending alert to the ENDEC w/ WAT' % (datetime.datetime.now().isoformat(' '), self.mon_id)
+                self.endec.alert_received(self, 1)
             elif self.state == src_state.nws_wat_detect and tone == 2:
                 self.state = src_state.alert_sent
                 self.last_state_change = datetime.datetime.utcnow()
                 self.endec.wat_ended(self, (self.last_state_change - self.tones_received[2]).total_seconds())
                 self.start_audio_recording()
+                print '%s %s: Sending alert to the ENDEC w/ WAT' % (datetime.datetime.now().isoformat(' '), self.mon_id)
+                self.endec.alert_received(self, 1)
             self.tones_received[tone] = None
 
 
@@ -171,14 +176,10 @@ class eas_source:
             if self.tones_received[0] and (now - self.tones_received[0]).total_seconds() > 1.5 and self.tones_received[1] and (now - self.tones_received[1]).total_seconds() > 1.5:
                 self.state = src_state.eas_wat_detect
                 self.last_state_change = now
-                print '%s %s: Sending alert to the ENDEC w/ WAT' % (datetime.datetime.now().isoformat(' '), self.mon_id)
-                self.endec.alert_received(self, 1)
 
             if self.tones_received[2] and (now - self.tones_received[2]).total_seconds() > 1.5:
                 self.state = src_state.nws_wat_detect
                 self.last_state_change = now
-                print '%s %s: Sending alert to the ENDEC w/ WAT' % (datetime.datetime.now().isoformat(' '), self.mon_id)
-                self.endec.alert_received(self, 1)
 
             if (now - self.last_state_change).total_seconds() > 7:
                 self.state = src_state.alert_sent
@@ -251,7 +252,8 @@ class eas_endec:
             try:
                 hook(msg)
             except:
-                pass
+                print '    WARNING: An exception occurred while processing an alert sent hook:'
+                print '    ', sys.exc_info()[0]
 
     def alert_received(self, source, with_wat):
         print 'Source %s received alert, wat: %d' % (source.mon_id, with_wat)
