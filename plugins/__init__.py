@@ -1,1 +1,1 @@
-__all__ = ['websocket']
+__all__ = ['websocket', 'irc']
